@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Quiz Parkinson</title>
+
+<style>
+body { font-family: Arial; background:#eef2f7; text-align:center; }
+.container { max-width:650px; margin:auto; background:white; padding:25px; border-radius:12px; box-shadow:0 0 10px rgba(0,0,0,0.1);}
+input, button { padding:10px; margin:8px; }
+button { cursor:pointer; border:none; border-radius:6px; background:#4CAF50; color:white; }
+#skip { background:#f39c12; }
+#next { background:#3498db; }
+#timer { font-size:18px; font-weight:bold; }
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🧠 Quiz Parkinson</h2>
+
+<div id="start">
+<input id="name" placeholder="Tu nombre">
+<br>
+<button id="startBtn">Iniciar Quiz</button>
+</div>
+
+<div id="quiz" style="display:none;">
+<p id="progress"></p>
+<p id="timer"></p>
+<p id="question"></p>
+
+<input id="answer" placeholder="Escribe tu respuesta">
+<br>
+
+<button id="submit">Responder</button>
+<button id="skip">No estoy seguro</button>
+
+<p id="feedback"></p>
+<button id="next" style="display:none;">Siguiente</button>
+</div>
+
+<div id="result" style="display:none;"></div>
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+let questions = [
+
+{q:"Fármaco precursor de dopamina que atraviesa la barrera hematoencefálica", a:["levodopa","l-dopa"]},
+
+{q:"Fármaco que se administra con levodopa para inhibir su conversión periférica", a:["carbidopa"]},
+
+{q:"Enfermedad caracterizada por disminución de dopamina en sustancia negra", a:["parkinson"]},
+
+{q:"Fármaco agonista dopaminérgico usado en Parkinson", a:["pramipexol","ropinirol"]},
+
+{q:"Inhibidor de MAO-B que aumenta dopamina en SNC", a:["selegilina","rasagilina"]},
+
+{q:"Inhibidor de COMT que prolonga efecto de levodopa", a:["entacapona"]},
+
+{q:"Síntoma cardinal de Parkinson caracterizado por temblor en reposo", a:["temblor"]},
+
+{q:"Síntoma característico de Parkinson relacionado con rigidez muscular", a:["rigidez"]},
+
+{q:"Efecto adverso de levodopa tras uso prolongado", a:["discinesias"]},
+
+{q:"Fármaco anticolinérgico usado para temblor en Parkinson", a:["benztropina"]},
+
+{q:"Caso: paciente con Parkinson presenta movimientos involuntarios tras tratamiento prolongado, diagnóstico", a:["discinesias"]},
+
+{q:"Fármaco que aumenta dopamina estimulando directamente receptores D2", a:["pramipexol","ropinirol"]},
+
+{q:"Efecto adverso de agonistas dopaminérgicos: conducta compulsiva", a:["impulsividad"]},
+
+{q:"Fármaco que inhibe degradación de dopamina en SNC", a:["selegilina"]},
+
+{q:"Tratamiento que mejora bradicinesia en Parkinson", a:["levodopa"]},
+
+{q:"Síntoma cardinal caracterizado por lentitud de movimientos", a:["bradicinesia"]},
+
+{q:"Efecto adverso de levodopa relacionado con sistema nervioso central", a:["alucinaciones"]},
+
+{q:"Fármaco que reduce metabolismo periférico de levodopa", a:["carbidopa"]},
+
+{q:"Caso: paciente con Parkinson presenta fluctuaciones motoras ON-OFF, fármaco implicado", a:["levodopa"]},
+
+{q:"Fármaco que prolonga efecto de dopamina inhibiendo COMT", a:["entacapona"]},
+
+{q:"Síntoma característico de Parkinson relacionado con postura", a:["inestabilidad postural"]},
+
+{q:"Fármaco anticolinérgico útil en temblor predominante", a:["benztropina"]},
+
+{q:"Efecto adverso de anticolinérgicos en Parkinson", a:["boca seca","vision borrosa"]},
+
+{q:"Fármaco que aumenta dopamina al inhibir MAO-B", a:["selegilina","rasagilina"]},
+
+{q:"Caso: paciente tratado con levodopa presenta corea, diagnóstico", a:["discinesias"]},
+
+{q:"Fármaco que actúa como agonista dopaminérgico directo", a:["pramipexol","ropinirol"]}
+
+];
+
+let selected = [];
+let index = 0;
+let score = 0;
+let timer;
+let timeLeft = 60;
+let answered = false;
+
+function normalize(text){
+return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+}
+
+function startQuiz(){
+let name = document.getElementById("name").value;
+if(!name) return alert("Ingresa tu nombre");
+
+localStorage.setItem("name", name);
+
+selected = questions.sort(()=>0.5-Math.random()).slice(0,10);
+index = 0;
+score = 0;
+
+document.getElementById("start").style.display="none";
+document.getElementById("quiz").style.display="block";
+
+loadQuestion();
+}
+
+function loadQuestion(){
+answered = false;
+timeLeft = 60;
+
+document.getElementById("answer").value="";
+document.getElementById("answer").disabled=false;
+document.getElementById("feedback").innerHTML="";
+document.getElementById("next").style.display="none";
+
+document.getElementById("progress").innerText=`Pregunta ${index+1}/10`;
+document.getElementById("question").innerText=selected[index].q;
+
+startTimer();
+}
+
+function startTimer(){
+clearInterval(timer);
+timer = setInterval(()=>{
+timeLeft--;
+document.getElementById("timer").innerText=`⏱️ ${timeLeft}s`;
+
+if(timeLeft<=0){
+clearInterval(timer);
+handleAnswer(null,true);
+}
+},1000);
+}
+
+function handleAnswer(userAnswer, timeout=false){
+if(answered) return;
+answered = true;
+clearInterval(timer);
+
+document.getElementById("answer").disabled = true;
+
+let correctAnswers = selected[index].a.map(a=>normalize(a));
+let user = normalize(userAnswer || "");
+
+let isCorrect = correctAnswers.includes(user);
+
+let points = isCorrect ? Math.round((timeLeft/60)*10) : 0;
+score += points;
+
+let feedback = "";
+
+if(timeout){
+feedback = `❌ Tiempo agotado (0 pts)<br>Respuesta: ${correctAnswers[0]}`;
+}else if(userAnswer===null){
+feedback = `❌ 0 pts<br>Respuesta: ${correctAnswers[0]}`;
+}else if(isCorrect){
+feedback = `✅ Correcto (+${points})`;
+}else{
+feedback = `❌ Incorrecto (0 pts)<br>Respuesta: ${correctAnswers[0]}`;
+}
+
+document.getElementById("feedback").innerHTML=feedback;
+document.getElementById("next").style.display="block";
+}
+
+function nextQuestion(){
+index++;
+if(index<10){
+loadQuestion();
+}else{
+endQuiz();
+}
+}
+
+function endQuiz(){
+document.getElementById("quiz").style.display="none";
+document.getElementById("result").style.display="block";
+
+let name = localStorage.getItem("name");
+let record = {name, score, date:new Date().toISOString(), tema:"parkinson"};
+
+let history = JSON.parse(localStorage.getItem("history")||"[]");
+history.push(record);
+localStorage.setItem("history", JSON.stringify(history));
+
+document.getElementById("result").innerHTML = `
+<h3>🎯 Puntaje: ${score}/100</h3>
+<button onclick="location.reload()">Reintentar</button>
+`;
+}
+
+document.getElementById("startBtn").addEventListener("click", startQuiz);
+document.getElementById("submit").addEventListener("click", ()=>handleAnswer(document.getElementById("answer").value));
+document.getElementById("skip").addEventListener("click", ()=>handleAnswer(null));
+document.getElementById("next").addEventListener("click", nextQuestion);
+
+});
+</script>
+
+</body>
+</html>
